@@ -1,46 +1,39 @@
 package com.smacc.challenge.failover.mailer.controller;
 
-import com.sendgrid.*;
+import com.smacc.challenge.failover.mailer.model.ErrorResponse;
 import com.smacc.challenge.failover.mailer.model.MailRequest;
+import com.smacc.challenge.failover.mailer.service.MailerService;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
+import java.lang.reflect.UndeclaredThrowableException;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+
 
 @RestController
 @RequestMapping("/mailer")
 @Slf4j
 public class MailerController {
 
-    @Value("${main.mail.api.key}")
-    String mainApiKey;
+    @Autowired
+    MailerService mailerService;
 
     @RequestMapping(value = "/send", method = RequestMethod.POST)
-    public void sendEmail(@RequestBody MailRequest mailContent) throws Exception {
+    public void sendEmail(@RequestBody MailRequest mailRequest) throws Exception {
+        mailerService.sendEmail(mailRequest);
+    }
 
-        Email from = new Email(mailContent.getSender());
-        String subject = mailContent.getSubject();
-        Email to = new Email(mailContent.getReceiver());
-        Content content = new Content("text/plain", mailContent.getContent());
-        Mail mail = new Mail(from, subject, to, content);
-
-        SendGrid sg = new SendGrid(mainApiKey);
-        Request request = new Request();
-        try {
-            request.setMethod(Method.POST);
-            request.setEndpoint("mail/send");
-            request.setBody(mail.build());
-            Response response = sg.api(request);
-            log.info(response.getStatusCode() + "");
-            log.info(response.getBody());
-            log.info(response.getHeaders().toString());
-        } catch (IOException ex) {
-            throw ex;
-        }
+    @ExceptionHandler(value = {UndeclaredThrowableException.class})
+    private ResponseEntity<ErrorResponse> handleException(UndeclaredThrowableException exception) throws Throwable {
+        Throwable undeclaredThrowable = exception.getUndeclaredThrowable();
+        ErrorResponse error = new ErrorResponse();
+        error.setStatus(HttpStatus.BAD_REQUEST.value());
+        error.setMessage(undeclaredThrowable.getMessage());
+        return new ResponseEntity<>(error, HttpStatus.BAD_REQUEST);
     }
 }
-
