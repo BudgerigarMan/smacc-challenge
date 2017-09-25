@@ -60,7 +60,6 @@ public class MailerService {
         Email to = new Email(mailRequest.getReceiver());
         Content content = new Content("text/plain", mailRequest.getContent());
         Mail mail = new Mail(from, subject, to, content);
-
         SendGrid sendGrid = new SendGrid(mainMailApiKey);
         Request request = new Request();
         request.setMethod(Method.POST);
